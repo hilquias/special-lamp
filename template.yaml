@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  postings
+
+  Sample SAM Template for postings
+
+Globals:
+  Function:
+    CodeUri: src
+    Runtime: nodejs14.x
+    Timeout: 3
+
+Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      FailOnWarnings: True
+      CorsConfiguration:
+        AllowHeaders: 
+          - Content-Type
+          - Authorization
+          - X-Forwarded-For
+          - X-Api-Key
+          - X-Amz-Date
+          - X-Amz-Security-Token
+        AllowMethods:
+          - PUT
+          - GET
+          - DELETE
+          - OPTIONS
+        AllowOrigins: 
+          - "*"
+
+  AccountsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: accounts/lambda.handler
+      Events:
+        ReportAccounts:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /accounts
+            Method: GET
+        CreateAccount:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /accounts
+            Method: POST
+        RenameAccount:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /accounts/{id}
+            Method: PUT
+        DeleteAccount:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /accounts/{id}
+            Method: DELETE
+
+  AccountsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: accountType
+          AttributeType: S
+        - AttributeName: parentAccount
+          AttributeType: S
+        - AttributeName: accountKey
+          AttributeType: S
+        - AttributeName: accountName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+Outputs:
+  APIEndpoint:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+
+  AccountsTable:
+    Description: "DynamoDB Accounts table"
+    Value: !Ref AccountsTable
